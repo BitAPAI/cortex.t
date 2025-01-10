@@ -30,11 +30,19 @@ from cortext.dendrite import CortexDendrite
 from cursor.app.endpoints.text import chat
 from cursor.app.endpoints.generic import models
 from cursor.app.core.middleware import APIKeyMiddleware
+from loguru import logger
+from concurrent.futures import ThreadPoolExecutor
 
+logger.add("logs/weight_setter.log")
+
+logger.info("WeightSetter.......")
 
 scoring_organic_timeout = 60
 NUM_INTERVALS_PER_CYCLE = 10
 
+# bt.logging.enable_default()
+# bt.logging.info("WeightSetter.......")
+# bt.logging.enable_trace()
 
 class WeightSetter:
     def __init__(self, config, cache: QueryResponseCache, loop=None):
@@ -215,8 +223,9 @@ class WeightSetter:
                                                                                   metagraph=self.metagraph)
                 })
                 query_syn.time_taken = query_syn.dendrite.process_time
-
-            axon = self.metagraph.axons[uid]
+            logger.info(f"query_miner.query_syn: {query_syn}")
+            print(self.metagraph.axons[:10])
+            axon = self.metagraph.axons[131]
             response = self.dendrite.call_stream(
                 target_axon=axon,
                 synapse=query_syn,
@@ -449,7 +458,7 @@ class WeightSetter:
             bt.logging.exception(err)
 
     async def images(self, synapse: ImageResponse) -> ImageResponse:
-        bt.logging.info(f"Received {synapse}")
+        logger.info(f"Received {synapse}")
 
         axon = self.metagraph.axons[synapse.uid]
         start_time = time.time()
@@ -493,7 +502,7 @@ class WeightSetter:
         return synapse_response
 
     async def prompt(self, synapse: StreamPrompting) -> StreamingSynapse.BTStreamingResponse:
-        bt.logging.info(f"Received {synapse}")
+        logger.info(f"Received {synapse}")
         contents = " ".join([message.get("content") for message in synapse.messages])
         if len(contents.split()) > 10000:
             raise HTTPException(status_code=413, detail="Request entity too large")
@@ -563,11 +572,25 @@ class WeightSetter:
         )
         self.cursor_setup()
         self.axon.serve(netuid=self.netuid, subtensor=self.subtensor)
-        print(f"axon: {self.axon}")
+        logger.info(f"axon: {self.axon}")
         self.axon.start()
         bt.logging.info(f"Running validator on uid: {self.my_uid}")
 
     def cursor_setup(self):
+        from fastapi import FastAPI
+        import uvicorn
+        self.proxy_app = FastAPI()
+        self.proxy_app.add_api_route(
+            "/v1/chat/completions",
+            chat,
+            methods=["POST", "OPTIONS"],
+            tags=["StreamPrompting"],
+            response_model=None
+        )
+        self.proxy_app.add_api_route("/v1/models", models, methods=["GET"], tags=["Text"], response_model=None)
+        # Run this app in uvicorn threadpool
+        threadpool_executor = ThreadPoolExecutor(max_workers=1)
+        threadpool_executor.submit(uvicorn.run(self.proxy_app, host="0.0.0.0", port=8000))
         self.axon.router.add_api_route(
             "/v1/chat/completions",
             chat,

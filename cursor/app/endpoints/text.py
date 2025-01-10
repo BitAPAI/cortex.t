@@ -7,11 +7,12 @@ from cursor.app.models import ChatRequest
 from cursor.app.core.query_to_validator import query_miner, query_miner_no_stream
 import bittensor as bt
 import traceback
-
+from loguru import logger
 
 async def chat(
         chat_request: ChatRequest
 ) -> StreamingResponse | JSONResponse:
+    logger.info(chat_request)
     try:
         if chat_request.stream:
             return StreamingResponse(query_miner(chat_request), media_type="text/event-stream")

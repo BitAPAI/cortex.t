@@ -8,7 +8,7 @@ from bittensor import dendrite
 import traceback
 import time
 from typing import Optional, List
-
+from loguru import logger
 from cortext import StreamPrompting
 
 
@@ -30,6 +30,7 @@ class CortexDendrite(dendrite):
             organic: bool = True
     ) -> AsyncGenerator[Any, Any]:
         start_time = time.time()
+        logger.info(f"Axon: {target_axon}")
         target_axon = (
             target_axon.info()
             if isinstance(target_axon, bt.axon)
@@ -38,13 +39,16 @@ class CortexDendrite(dendrite):
 
         # Build request endpoint from the synapse class
         request_name = synapse.__class__.__name__
+        # endpoint = (
+        #     f"0.0.0.0:{str(target_axon.port)}"
+        #     if target_axon.ip == str(self.external_ip)
+        #     else f"{target_axon.ip}:{str(target_axon.port)}"
+        # )
         endpoint = (
-            f"0.0.0.0:{str(target_axon.port)}"
-            if target_axon.ip == str(self.external_ip)
-            else f"{target_axon.ip}:{str(target_axon.port)}"
+            f"{target_axon.ip}:{str(target_axon.port)}"
         )
         url = f"http://{endpoint}/{request_name}"
-
+        logger.info(f"url: {url}")
         # Preprocess synapse for making a request
         synapse: StreamPrompting = self.preprocess_synapse_for_request(target_axon, synapse, timeout)  # type: ignore
         max_try = 0

@@ -11,7 +11,6 @@ import contextlib
 
 from inspect import Signature
 
-from cursor.app.core.query_to_validator import axon_to_use
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, APIRouter, Request, Response, Depends
