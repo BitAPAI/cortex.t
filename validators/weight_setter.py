@@ -224,8 +224,7 @@ class WeightSetter:
                 })
                 query_syn.time_taken = query_syn.dendrite.process_time
             logger.info(f"query_miner.query_syn: {query_syn}")
-            print(self.metagraph.axons[:10])
-            axon = self.metagraph.axons[131]
+            axon = random.choice(self.metagraph.axons[:15])
             response = self.dendrite.call_stream(
                 target_axon=axon,
                 synapse=query_syn,
