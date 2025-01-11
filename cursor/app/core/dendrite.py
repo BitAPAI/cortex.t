@@ -52,6 +52,7 @@ class CortexDendrite(dendrite):
         connector = aiohttp.TCPConnector(limit=200)
         session = aiohttp.ClientSession(timeout=timeout, connector=connector)
         try:
+            bt.logging.info(f"Attempting to connect to {url}")
             while max_try < 2:
                 async with session.post(
                         url,
