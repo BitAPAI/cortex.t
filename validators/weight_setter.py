@@ -1,48 +1,37 @@
 import asyncio
-import copy
 import random
 import threading
-import json
-
-import torch
 import time
-
 from collections import defaultdict
-from substrateinterface import SubstrateInterface
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Tuple
 
-from fastapi import HTTPException
 import bittensor as bt
+import torch
 from bittensor import StreamingSynapse
+from fastapi import HTTPException
+from loguru import logger
+from starlette.types import Send
+from substrateinterface import SubstrateInterface
 
 import cortext
-from starlette.types import Send
-
-from cortext.protocol import IsAlive, StreamPrompting, ImageResponse, Embeddings
-from cortext.metaclasses import ValidatorRegistryMeta
-from validators.services import CapacityService, BaseValidator, TextValidator, ImageValidator
-from validators.services.cache import QueryResponseCache
-from validators.utils import error_handler, setup_max_capacity, load_entire_questions
-from validators.task_manager import TaskMgr
-from validators.core.axon import CortexAxon
 from cortext.dendrite import CortexDendrite
-from cursor.app.endpoints.text import chat
+from cortext.metaclasses import ValidatorRegistryMeta
+from cortext.protocol import IsAlive, StreamPrompting, ImageResponse, Embeddings
 from cursor.app.endpoints.generic import models
-from cursor.app.core.middleware import APIKeyMiddleware
-from loguru import logger
-from concurrent.futures import ThreadPoolExecutor
+from cursor.app.endpoints.text import chat
+from validators.core.axon import CortexAxon
+from validators.services import CapacityService
+from validators.services.cache import QueryResponseCache
+from validators.task_manager import TaskMgr
+from validators.utils import setup_max_capacity, load_entire_questions
 
 logger.add("logs/weight_setter.log")
-
 logger.info("WeightSetter.......")
 
 scoring_organic_timeout = 60
 NUM_INTERVALS_PER_CYCLE = 10
-
-# bt.logging.enable_default()
-# bt.logging.info("WeightSetter.......")
-# bt.logging.enable_trace()
 
 class WeightSetter:
     def __init__(self, config, cache: QueryResponseCache, loop=None):
